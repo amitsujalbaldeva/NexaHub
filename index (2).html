@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexaHub - 10-in-1 Online Utility Tools</title>
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<nav>
+    <a href="./index.html" class="logo">NexaHub</a>
+    <ul>
+        <li><a href="./index.html">Home</a></li>
+        <li><a href="./tools.html">All Tools</a></li>
+    </ul>
+</nav>
+
+<section class="hero">
+    <h1>All Your Digital Tools In One Place</h1>
+    <p>Free, fast, and secure client-side tools. No server delays, no data tracking.</p>
+    
+    <div class="search">
+        <input type="text" id="searchBox" placeholder="Search tools (e.g. Password, QR, PDF)..." onkeyup="searchTool()">
+        <button onclick="searchTool()">Search</button>
+        <div id="searchResults"></div>
+    </div>
+</section>
+
+<h2 class="section-title">🔥 Featured Utilities (Phase 1 Launcher)</h2>
+<section class="features">
+    <!-- 1. Image Resize -->
+    <div class="box" onclick="window.location.href='./image-resize.html'">
+        <h2>📐 Image Resizer</h2>
+        <p>Scale custom image dimension ratios instantly.</p>
+    </div>
+    
+    <!-- 2. Image Compress -->
+    <div class="box" onclick="window.location.href='./image-compress.html'">
+        <h2>📉 Image Compressor</h2>
+        <p>Optimize and reduce image size efficiently.</p>
+    </div>
+
+    <!-- 3. Image to PDF -->
+    <div class="box" onclick="window.location.href='./image-to-pdf.html'">
+        <h2>📄 Image to PDF</h2>
+        <p>Convert your images into sequential PDF files.</p>
+    </div>
+
+    <!-- 4. PDF Merge -->
+    <div class="box" onclick="window.location.href='./pdf-merge.html'">
+        <h2>📑 PDF Combiner</h2>
+        <p>Merge multiple PDF tracks seamlessly into one.</p>
+    </div>
+
+    <!-- 5. QR Generator -->
+    <div class="box" onclick="window.location.href='./qr-generator.html'">
+        <h2>🔮 QR Code Generator</h2>
+        <p>Turn any custom text or web URL into a live QR.</p>
+    </div>
+
+    <!-- 6. Password Generator -->
+    <div class="box" onclick="window.location.href='./password-generator.html'">
+        <h2>🔑 Password Generator</h2>
+        <p>Generate cryptographic secure complex phrases.</p>
+    </div>
+
+    <!-- 7. Age Calculator -->
+    <div class="box" onclick="window.location.href='./age.html'">
+        <h2>🎂 Age Calculator</h2>
+        <p>Detailed date parameter metric tracker.</p>
+    </div>
+
+    <!-- 8. Unit Converter -->
+    <div class="box" onclick="window.location.href='./unit-converter.html'">
+        <h2>⚖️ Unit Converter</h2>
+        <p>Quick scale metric transformations on the go.</p>
+    </div>
+
+    <!-- 9. Text Case Converter -->
+    <div class="box" onclick="window.location.href='./text-converter.html'">
+        <h2>🔤 Text Case Converter</h2>
+        <p>Switch between UPPER, lower, and Capital cases.</p>
+    </div>
+</section>
+
+<footer>
+    <h2>NexaHub</h2>
+    <p>One Place For Smart Online Tools</p>
+    <p>© 2026 NexaHub. All Rights Reserved.</p>
+</footer>
+
+<script src="./script.js"></script>
+</body>
+</html>
