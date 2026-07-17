@@ -1,27 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>PDF Merge</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Combiner - Pro - NexaHub</title>
+    <link rel="stylesheet" href="./style.css">
+    <style>
+        .tool-container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 30px;
+            background: #1e1e2f;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            text-align: center;
+            border: 1px solid #33334d;
+        }
+        .upload-zone {
+            border: 2px dashed #4f46e5;
+            padding: 30px;
+            border-radius: 12px;
+            background: #252538;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: 0.3s;
+        }
+        .upload-zone:hover { border-color: #6366f1; background: #2a2a3f; }
+        .file-status { color: #10b981; font-weight: bold; margin: 15px 0; font-size: 1.1rem; }
+        .action-btn {
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            color: white; border: none; padding: 14px 28px;
+            font-size: 1rem; font-weight: bold; border-radius: 8px;
+            cursor: pointer; width: 100%; transition: 0.2s;
+        }
+        .action-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
+    </style>
 </head>
-
 <body>
 
-<h1>📄 PDF Merge</h1>
+<nav>
+    <a href="./index.html" class="logo">NexaHub</a>
+</nav>
 
-<input type="file" id="pdfFiles" accept=".pdf" multiple>
+<div class="tool-container">
+    <h1>📑 Advanced PDF Combiner</h1>
+    <p style="color: #9ca3af; margin-bottom: 25px;">Select multiple PDF documents to merge them into a single file safely.</p>
+    
+    <div class="upload-zone" onclick="document.getElementById('pdfFiles').click()">
+        <span style="font-size: 3rem;">📥</span>
+        <p style="color: #cbd5e1; margin-top: 10px; font-weight: 500;">Click to select or upload your PDFs</p>
+        <input type="file" id="pdfFiles" accept="application/pdf" multiple style="display: none;" onchange="updateStatus()">
+    </div>
 
-<br><br>
+    <div id="statusMessage" class="file-status" style="display: none;"></div>
+    
+    <button class="action-btn" onclick="mergePDFFiles()">⚡ Merge Documents</button>
+</div>
 
-<button onclick="mergePDF()">
-Merge PDFs
-</button>
-
-<p id="mergeStatus"></p>
-
-<script src="script.js"></script>
-
+<script src="./script.js"></script>
+<script>
+function updateStatus() {
+    const input = document.getElementById('pdfFiles');
+    const status = document.getElementById('statusMessage');
+    if(input.files.length > 0) {
+        status.innerText = `✅ ${input.files.length} PDF Document(s) Selected Ready to Merge!`;
+        status.style.display = 'block';
+    }
+}
+</script>
 </body>
 </html>
