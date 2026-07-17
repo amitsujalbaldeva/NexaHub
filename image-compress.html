@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en"><head><title>Image Compress - NexaHub</title><link rel="stylesheet" href="style.css"></head><body>
+<nav><a href="index.html" class="logo">NexaHub</a></nav>
+<div class="tool-box">
+    <h1>📉 Image Compressor</h1>
+    <input type="file" id="compInput" accept="image/*">
+    <label style="color:white; display:block; margin: 10px 0 5px;">Quality Profile:</label>
+    <select id="quality"><option value="0.7">High Compression (Low Quality)</option><option value="0.5" selected>Medium Balanced</option><option value="0.2">Max Compact</option></select>
+    <button class="tool-btn" onclick="compressImage()">Compress Asset</button>
+    <br><img id="compPreview" style="max-width:100%; margin-top:15px; border-radius:8px;"><br>
+    <a id="compDl" class="download-btn" style="display:none;">⬇ Download Compressed File</a>
+</div>
+<script src="script.js"></script>
+</body></html>
