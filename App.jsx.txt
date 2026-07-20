@@ -1,0 +1,381 @@
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { Search, PlusCircle, MessageCircle, User, ShoppingBag, LogOut, ChevronLeft, Send, Upload } from 'lucide-react';
+import { auth, db, storage } from './firebase';
+import { signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
+import { collection, addDoc, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+// --- Components ---
+
+const SplashScreen = ({ onComplete }) => {
+  return (
+    <div className="h-screen w-full bg-blue-600 flex flex-col items-center justify-center p-6 text-white text-center">
+      <h1 className="text-5xl font-bold mb-8 animate-bounce">Sujal</h1>
+      <p className="text-xl mb-12 text-blue-100">Your Notes Marketplace</p>
+      <div className="space-y-4 w-full max-w-xs">
+        <button 
+          onClick={onComplete}
+          className="w-full py-4 bg-white text-blue-600 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-transform"
+        >
+          Get Started / शुरू करें
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Navbar = () => (
+  <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3 flex justify-between items-center z-50 md:top-0 md:bottom-auto md:border-b md:border-t-0 max-w-md mx-auto">
+    <Link to="/" className="flex flex-col items-center text-blue-600">
+      <ShoppingBag size={24} />
+      <span className="text-[10px] mt-1 font-medium">Home</span>
+    </Link>
+    <Link to="/upload" className="flex flex-col items-center text-gray-500">
+      <PlusCircle size={24} />
+      <span className="text-[10px] mt-1 font-medium">Upload</span>
+    </Link>
+    <Link to="/chat" className="flex flex-col items-center text-gray-500">
+      <MessageCircle size={24} />
+      <span className="text-[10px] mt-1 font-medium">Chat</span>
+    </Link>
+    <Link to="/profile" className="flex flex-col items-center text-gray-500">
+      <User size={24} />
+      <span className="text-[10px] mt-1 font-medium">Profile</span>
+    </Link>
+  </nav>
+);
+
+const Dashboard = ({ notes }) => {
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('All');
+  const categories = ['All', 'SSC', 'UPSC', 'JEE', 'NEET'];
+
+  const filteredNotes = notes.filter(note => {
+    const matchesSearch = note.title.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = filter === 'All' || note.category === filter;
+    return matchesSearch && matchesFilter;
+  });
+
+  return (
+    <div className="pb-24 pt-6 px-4 max-w-md mx-auto">
+      <header className="mb-6">
+        <h2 className="text-2xl font-extrabold text-gray-900">Find Best Notes</h2>
+      </header>
+      
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+        <input 
+          type="text" 
+          placeholder="Search topics..." 
+          className="w-full pl-10 pr-4 py-3 bg-white shadow-sm border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6 pb-2">
+        {categories.map(cat => (
+          <button 
+            key={cat}
+            onClick={() => setFilter(cat)}
+            className={`px-5 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${filter === cat ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-600'}`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+        {filteredNotes.length > 0 ? (
+          filteredNotes.map(note => (
+            <div key={note.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-gray-800">{note.title}</h3>
+                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">{note.category}</p>
+                <p className="text-xs text-gray-400 mt-1">By {note.author || 'Anonymous'}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-bold text-lg text-gray-900">₹{note.price}</p>
+                <button className="mt-2 px-4 py-1.5 bg-blue-600 text-white text-xs rounded-lg font-bold hover:bg-blue-700 active:scale-95 transition-all">
+                  Buy Now
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-20 text-gray-400">No notes found</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const UploadForm = ({ onUploadSuccess, user }) => {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({ title: '', category: 'SSC', price: '', file: null });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.file) return alert('Please select a file');
+    setLoading(true);
+
+    try {
+      // 1. Upload File to Storage
+      const storageRef = ref(storage, `notes/${Date.now()}_${formData.file.name}`);
+      const snapshot = await uploadBytes(storageRef, formData.file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      // 2. Save Metadata to Firestore
+      await addDoc(collection(db, "notes"), {
+        title: formData.title,
+        category: formData.category,
+        price: parseFloat(formData.price),
+        fileUrl: downloadURL,
+        authorId: user.uid,
+        authorName: user.isAnonymous ? 'Anonymous Seller' : user.email.split('@')[0],
+        createdAt: new Date()
+      });
+
+      alert('Notes uploaded successfully!');
+      onUploadSuccess();
+    } catch (error) {
+      console.error(error);
+      alert('Upload failed. Check console for details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-6 pb-24 max-w-md mx-auto">
+      <h2 className="text-2xl font-bold mb-6">Sell Your Notes</h2>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">Note Title</label>
+          <input 
+            required
+            type="text" 
+            className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="e.g. Organic Chemistry Basics"
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">Exam Category</label>
+          <select 
+            className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            onChange={(e) => setFormData({...formData, category: e.target.value})}
+          >
+            <option>SSC</option>
+            <option>UPSC</option>
+            <option>JEE</option>
+            <option>NEET</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">Price (₹)</label>
+          <input 
+            required
+            type="number" 
+            className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="0.00"
+            onChange={(e) => setFormData({...formData, price: e.target.value})}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">PDF File</label>
+          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center bg-gray-50">
+            <input 
+              type="file" 
+              accept="application/pdf"
+              id="file-upload" 
+              className="hidden" 
+              onChange={(e) => setFormData({...formData, file: e.target.files[0]})}
+            />
+            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+              <Upload className="text-blue-500 mb-2" size={32} />
+              <span className="text-blue-600 font-medium">
+                {formData.file ? formData.file.name : 'Click to upload PDF'}
+              </span>
+            </label>
+          </div>
+        </div>
+        <button 
+          disabled={loading}
+          type="submit" 
+          className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all ${loading ? 'bg-gray-400' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+        >
+          {loading ? 'Uploading...' : 'List Notes for Sale'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
+const ChatInterface = () => {
+  const [activeChat, setActiveChat] = useState(null);
+  const [message, setMessage] = useState('');
+  
+  const chats = [
+    { id: 1, name: 'Rahul (Seller)', lastMsg: 'Is the PDF updated?', time: '2m ago' },
+    { id: 2, name: 'Simran (Buyer)', lastMsg: 'Thank you for the notes!', time: '1h ago' },
+  ];
+
+  const messages = [
+    { id: 1, sender: 'other', text: 'Is the PDF updated for 2024 syllabus?' },
+    { id: 2, sender: 'me', text: 'Yes, all chapters are covered.' },
+  ];
+
+  return (
+    <div className="h-screen flex flex-col max-w-md mx-auto bg-white relative shadow-2xl">
+      {!activeChat ? (
+        <div className="flex-1 flex flex-col p-6 overflow-y-auto">
+          <h2 className="text-2xl font-bold mb-6">Messages</h2>
+          <div className="space-y-4">
+            {chats.map(chat => (
+              <div 
+                key={chat.id} 
+                onClick={() => setActiveChat(chat)}
+                className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors"
+              >
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                  {chat.name[0]}
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-bold text-gray-800">{chat.name}</h4>
+                    <span className="text-xs text-gray-400">{chat.time}</span>
+                  </div>
+                  <p className="text-sm text-gray-500 truncate">{chat.lastMsg}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="p-4 border-b flex items-center gap-4 bg-white sticky top-0 z-10">
+            <button onClick={() => setActiveChat(null)} className="p-1 hover:bg-gray-100 rounded-full">
+              <ChevronLeft />
+            </button>
+            <h3 className="font-bold text-lg">{activeChat.name}</h3>
+          </div>
+          <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50">
+            {messages.map(m => (
+              <div key={m.id} className={`flex ${m.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${m.sender === 'me' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none'}`}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="p-4 border-t bg-white flex items-center gap-2">
+            <input 
+              type="text" 
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type a message..." 
+              className="flex-1 p-3 bg-gray-100 rounded-xl outline-none text-sm"
+            />
+            <button className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 transition-colors">
+              <Send size={18} />
+            </button>
+          </div>
+        </>
+      )}
+      <Navbar />
+    </div>
+  );
+};
+
+const Profile = ({ signOutFn }) => (
+  <div className="p-6 pb-24 max-w-md mx-auto">
+    <div className="flex flex-col items-center mb-10">
+      <div className="w-24 h-24 bg-blue-600 rounded-3xl shadow-lg flex items-center justify-center text-white text-4xl font-bold mb-4 transform rotate-3">
+        S
+      </div>
+      <h2 className="text-2xl font-bold">Sujal User</h2>
+      <p className="text-gray-500 text-sm">Premium Member</p>
+    </div>
+    <div className="space-y-3">
+      <div className="p-4 bg-white rounded-2xl flex justify-between items-center border border-gray-100 shadow-sm">
+        <span className="font-medium text-gray-700">My Purchases</span>
+        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold">4</span>
+      </div>
+      <div className="p-4 bg-white rounded-2xl flex justify-between items-center border border-gray-100 shadow-sm">
+        <span className="font-medium text-gray-700">My Uploads</span>
+        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold">2</span>
+      </div>
+      <div className="pt-6">
+        <button 
+          onClick={signOutFn}
+          className="w-full p-4 text-red-500 font-bold flex items-center justify-center gap-2 hover:bg-red-50 rounded-2xl transition-colors"
+        >
+          <LogOut size={20} /> Logout
+        </button>
+      </div>
+    </div>
+    <Navbar />
+  </div>
+);
+
+// --- Main App ---
+
+export default function App() {
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [showSplash, setShowSplash] = useState(true);
+  const [notes, setNotes] = useState([]);
+
+  useEffect(() => {
+    // Auth listener
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      if (u) {
+        setUser(u);
+        // Listen to notes collection
+        const q = query(collection(db, "notes"), orderBy("createdAt", "desc"));
+        const unsubscribeNotes = onSnapshot(q, (snapshot) => {
+          const notesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setNotes(notesData);
+        });
+        return () => unsubscribeNotes();
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
+    // Anonymous login for seamless UX if not authenticated
+    if (!loading && !user) {
+      signInAnonymously(auth).catch(err => console.error("Auth error:", err));
+    }
+  }, [loading, user]);
+
+  const handleSplashComplete = () => setShowSplash(false);
+  const handleSignOut = () => signOut(auth);
+
+  if (loading && !showSplash) return <div className="h-screen flex items-center justify-center">Loading...</div>;
+
+  return (
+    <Router>
+      {showSplash ? (
+        <SplashScreen onComplete={handleSplashComplete} />
+      ) : (
+        <div className="min-h-screen bg-gray-50">
+          <Routes>
+            <Route path="/" element={<Dashboard notes={notes} />} />
+            <Route path="/upload" element={user ? <UploadForm onUploadSuccess={() => window.location.pathname='/'} user={user} /> : <div className="p-10">Please log in</div>} />
+            <Route path="/chat" element={<ChatInterface />} />
+            <Route path="/profile" element={<Profile signOutFn={handleSignOut} />} />
+          </Routes>
+          <Navbar />
+        </div>
+      )}
+    </Router>
+  );
+}
